@@ -1,6 +1,8 @@
+/* eslint-disable no-undef */
 'use strict'
-const AWS = require('aws-sdk')
-const db = new AWS.DynamoDB.DocumentClient()
+const dynamodb = require('serverless-dynamodb-client')
+const docClient = dynamodb.doc
+
 const { v4: uuidv4 } = require('uuid')
 
 const postsTable = process.env.POSTS_TABLE
@@ -12,12 +14,15 @@ function response(statusCode, message) {
     body: JSON.stringify(message),
   }
 }
+function sortByDate(a, b) {
+  if (a.createdAt > b.createdAt) {
+    return -1
+  } else return 1
+}
 
 // Create a post
 module.exports.createPost = (event, context, callback) => {
   const reqBody = JSON.parse(event.body)
-
-  console.log(reqBody)
 
   if (
     !reqBody.title ||
@@ -41,7 +46,7 @@ module.exports.createPost = (event, context, callback) => {
     body: reqBody.body,
   }
 
-  return db
+  return docClient
     .put({
       TableName: postsTable,
       Item: post,
@@ -51,4 +56,17 @@ module.exports.createPost = (event, context, callback) => {
       callback(null, response(201, post))
     })
     .catch((err) => response(null, response(err.statusCode, err)))
+}
+
+// Get all posts
+module.exports.getAllPosts = (event, context, callback) => {
+  return docClient
+    .scan({
+      TableName: postsTable,
+    })
+    .promise()
+    .then((res) => {
+      callback(null, response(200, res.Items.sort(sortByDate)))
+    })
+    .catch((err) => callback(null, response(err.statusCode, err)))
 }

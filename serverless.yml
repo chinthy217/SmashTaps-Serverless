@@ -5,6 +5,15 @@ service: simpleposts
 custom:
   settings:
     POSTS_TABLE: posts
+  dynamodb:
+    stages:
+      - dev
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+    migration:
+      dir: offline/migrations
 
 provider:
   name: aws
@@ -20,8 +29,14 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
+        - s3:*
+        - ses:*
       Resource:
         - 'arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.POSTS_TABLE}'
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline
 
 functions:
   createPost:
@@ -30,6 +45,13 @@ functions:
       - http:
           path: /post
           method: post
+
+  getAllPosts:
+    handler: handler.getAllPosts
+    events:
+      - http:
+          path: /posts
+          method: get
 
 resources:
   Resources:
