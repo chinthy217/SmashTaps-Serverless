@@ -1,10 +1,9 @@
 org: chinthaka
 app: my-first-app
-service: simpleposts
+service: mailservice
 
 custom:
   settings:
-    POSTS_TABLE: posts
     MAIL_TABLE: mail
   dynamodb:
     stages:
@@ -33,39 +32,38 @@ provider:
         - s3:*
         - ses:*
       Resource:
-        - 'arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.POSTS_TABLE}'
+        - 'arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.MAIL_TABLE}'
 
 plugins:
   - serverless-dynamodb-local
   - serverless-offline
 
 functions:
-  createPost:
-    handler: handler.createPost
+  parseMail:
+    handler: handler.parseMail
     events:
       - http:
-          path: /post
+          path: /parse
           method: post
-
-  getAllPosts:
-    handler: handler.getAllPosts
+  getAllMail:
+    handler: handler.getAllMail
     events:
       - http:
-          path: /posts
+          path: /mails
           method: get
 
 resources:
   Resources:
-    PostsTable:
+    MailTable:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: 'id'
+          - AttributeName: 'MessageId'
             AttributeType: 'S'
         KeySchema:
-          - AttributeName: 'id'
+          - AttributeName: 'MessageId'
             KeyType: 'HASH'
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-        TableName: ${self:custom.settings.POSTS_TABLE}
+        TableName: ${self:custom.settings.MAIL_TABLE}
